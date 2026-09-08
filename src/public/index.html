@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAFITE — Extractor de Facturas DIAN</title>
+  <meta name="description" content="Microservicio SAFITE para extracción automática de facturas electrónicas DIAN desde múltiples buzones de correo." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ═══ Sidebar ════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="8" fill="url(#logoGrad)"/>
+            <path d="M7 9h14M7 14h9M7 19h11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#6366f1"/>
+                <stop offset="1" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">SAFITE</span>
+      </div>
+      <div class="logo-subtitle">Extractor DIAN</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="dashboard" id="nav-dashboard" aria-label="Dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+
+      <button class="nav-item" data-view="invoices" id="nav-invoices" aria-label="Facturas">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>
+        </svg>
+        <span>Facturas</span>
+        <span class="nav-badge" id="invoices-badge" style="display:none">0</span>
+      </button>
+
+      <button class="nav-item" data-view="mailboxes" id="nav-mailboxes" aria-label="Buzones">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12 19.79 19.79 0 0 1 1.07 3.37 2 2 0 0 1 3.05 1h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91"/>
+        </svg>
+        <span>Buzones</span>
+      </button>
+
+      <button class="nav-item" data-view="scheduler" id="nav-scheduler" aria-label="Scheduler">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+        </svg>
+        <span>Scheduler</span>
+        <span class="nav-dot" id="scheduler-dot" style="display:none"></span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <div class="status-indicator" id="system-status-dot"></div>
+        <span id="system-status-text">Sistema listo</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ Main Content ════════════════════════════════════════ -->
+  <main class="main" id="main">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+        <span class="page-subtitle" id="page-subtitle">Resumen del sistema</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm" id="theme-toggle" onclick="toggleTheme()" title="Alternar tema" style="margin-right: 8px; padding: 6px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="theme-icon-sun" style="display:none;">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="theme-icon-moon">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <div class="search-box" style="margin-right: 8px; min-width: 140px; padding: 6px 12px;" title="Días hacia atrás a buscar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <input type="number" id="days-back" placeholder="Días (ej: 30)" value="30" min="1" max="365" style="font-size: 0.8rem;" />
+        </div>
+        <div class="last-sync" id="last-sync-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23,4 23,10 17,10"/><polyline points="1,20 1,14 7,14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span id="last-sync-time">Nunca</span>
+        </div>
+        <button class="btn btn-primary" id="btn-extract" onclick="triggerExtraction()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+          </svg>
+          <span id="btn-extract-text">Extraer Ahora</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Toast Container -->
+    <div id="toast-container" aria-live="polite"></div>
+
+    <!-- Extraction Progress Bar -->
+    <div class="progress-bar-container" id="progress-container" style="display:none">
+      <div class="progress-bar" id="progress-bar"></div>
+      <span class="progress-label" id="progress-label">Extrayendo facturas...</span>
+    </div>
+
+    <!-- ── VIEW: Dashboard ─────────────────────────────────── -->
+    <section class="view active" id="view-dashboard">
+
+      <div class="stats-grid">
+        <div class="stat-card" id="stat-total">
+          <div class="stat-icon stat-icon--purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-total-value">—</div>
+            <div class="stat-label">Facturas encontradas</div>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-mailboxes">
+          <div class="stat-icon stat-icon--blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-mailboxes-value">—</div>
+            <div class="stat-label">Buzones activos</div>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-success">
+          <div class="stat-icon stat-icon--green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-success-value">—</div>
+            <div class="stat-label">Buzones exitosos</div>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-errors">
+          <div class="stat-icon stat-icon--red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-errors-value">—</div>
+            <div class="stat-label">Buzones con error</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Info -->
+      <div class="session-card glass-card" id="session-card" style="display:none">
+        <div class="session-header">
+          <div class="session-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+            </svg>
+            Última sesión de extracción
+          </div>
+          <div class="session-meta">
+            <span class="badge badge--purple" id="session-id"></span>
+            <span id="session-duration"></span>
+          </div>
+        </div>
+        <div class="session-timeline" id="session-mailboxes-summary"></div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="dashboard-empty">
+        <div class="empty-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12 19.79 19.79 0 0 1 1.07 3.37 2 2 0 0 1 3.05 1h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91"/>
+          </svg>
+        </div>
+        <h2>Sin datos todavía</h2>
+        <p>Haz clic en <strong>"Extraer Ahora"</strong> para buscar facturas DIAN en los buzones configurados.</p>
+        <button class="btn btn-primary btn-lg" onclick="triggerExtraction()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+          </svg>
+          Iniciar Primera Extracción
+        </button>
+      </div>
+    </section>
+
+    <!-- ── VIEW: Facturas ──────────────────────────────────── -->
+    <section class="view" id="view-invoices">
+      <div class="view-toolbar">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="invoice-search" placeholder="Buscar por NIT, empresa, N° factura..." oninput="filterInvoices()"/>
+        </div>
+        <div class="toolbar-filters">
+          <select id="filter-provider" class="select-filter" onchange="filterInvoices()">
+            <option value="">Todos los proveedores</option>
+            <option value="microsoft">Microsoft</option>
+            <option value="google">Google</option>
+            <option value="imap">IMAP</option>
+          </select>
+          <select id="filter-tipodoc" class="select-filter" onchange="filterInvoices()">
+            <option value="">Todos los tipos</option>
+            <option value="01">Factura de Venta</option>
+            <option value="91">Nota Débito</option>
+            <option value="92">Nota Crédito</option>
+            <option value="95">Doc. Soporte</option>
+          </select>
+        </div>
+        <span class="result-count" id="invoice-count">0 facturas</span>
+      </div>
+
+      <div class="table-container glass-card">
+        <table class="data-table" id="invoices-table">
+          <thead>
+            <tr>
+              <th>NIT Emisor</th>
+              <th>Empresa</th>
+              <th>N° Factura</th>
+              <th>Tipo</th>
+              <th>NIT Adquirente</th>
+              <th>Buzón</th>
+              <th>Fecha</th>
+              <th>Adjuntos</th>
+              <th class="th-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="invoices-tbody">
+            <!-- Filas generadas por JS -->
+          </tbody>
+        </table>
+        <div class="table-empty" id="invoices-empty" style="display:none">
+          <p>No se encontraron facturas con los filtros actuales.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── VIEW: Buzones ───────────────────────────────────── -->
+    <section class="view" id="view-mailboxes">
+      <div class="view-toolbar" style="margin-bottom: 0;">
+        <h2 style="font-size: 1.1rem; font-weight: 600;">Buzones Configurados</h2>
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+          <button class="btn btn-danger" onclick="clearMailboxes()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            Limpiar Todo
+          </button>
+          <button class="btn btn-primary" onclick="toggleMailboxEditor()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Editar Configuración (JSON)
+          </button>
+        </div>
+      </div>
+
+      <div id="mailboxes-editor-container" class="glass-card" style="display: none; flex-direction: column; gap: 12px; flex: 1;">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">Edite el arreglo JSON con la configuración de sus buzones. Las credenciales se envían de forma segura y se almacenan en el servidor.</p>
+        
+        <details style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; cursor: pointer;">
+          <summary style="font-weight: 600; outline: none;">Ver ejemplos de configuración (IMAP, Google, Microsoft)</summary>
+          <div style="margin-top: 10px; cursor: text;">
+            <strong>IMAP Estándar:</strong><br>
+            <pre style="background: var(--bg-muted); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0 12px; color: var(--text-primary);">{
+  "id": "mb_1", "label": "Mi IMAP", "email": "ejemplo@imap.com", "provider": "imap", "active": true,
+  "credentials": { "host": "imap.server.com", "port": "993", "user": "ejemplo@imap.com", "password": "123", "tls": true, "mailbox": "INBOX" }
+}</pre>
+            
+            <strong>Microsoft 365:</strong><br>
+            <pre style="background: var(--bg-muted); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0 12px; color: var(--text-primary);">{
+  "id": "mb_2", "label": "Mi Microsoft", "email": "facturas@microsoft365.com", "provider": "microsoft", "active": true,
+  "credentials": { "tenantId": "...", "clientId": "...", "clientSecret": "...", "userEmail": "facturas@microsoft365.com" }
+}</pre>
+            
+            <strong>Google Workspace (Service Account):</strong><br>
+            <pre style="background: var(--bg-muted); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0 12px; color: var(--text-primary);">{
+  "id": "mb_3", "label": "Mi Google Workspace", "email": "facturas@gmail.com", "provider": "google", "active": true,
+  "credentials": { "authType": "service_account", "userEmail": "facturas@gmail.com", "clientEmail": "cuenta@proyecto.iam.gserviceaccount.com", "privateKey": "-----BEGIN PRIVATE KEY..." }
+}</pre>
+          </div>
+        </details>
+
+        <textarea id="mailboxes-json-input" style="flex: 1; width: 100%; min-height: 350px; font-family: var(--font-mono); font-size: 0.8rem; padding: 16px; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); outline: none;"></textarea>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-ghost" onclick="toggleMailboxEditor()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveMailboxes()">Guardar Configuración</button>
+        </div>
+      </div>
+
+      <div class="mailboxes-grid" id="mailboxes-grid">
+        <!-- Tarjetas generadas por JS -->
+      </div>
+      <div class="empty-state" id="mailboxes-empty" style="display:none">
+        <div class="empty-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          </svg>
+        </div>
+        <h2>Sin buzones configurados</h2>
+        <p>Configure los buzones en el archivo <code>.env</code> usando la convención <code>MAILBOX_1_PROVIDER</code>.</p>
+      </div>
+    </section>
+
+    <!-- ── VIEW: Scheduler ────────────────────────────────── -->
+    <section class="view" id="view-scheduler">
+      <div class="scheduler-layout">
+        <!-- Control Panel -->
+        <div class="glass-card scheduler-panel">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+            </svg>
+            <h2>Control del Scheduler</h2>
+          </div>
+
+          <div class="scheduler-status-row" id="scheduler-status-display">
+            <div class="status-badge" id="sched-status-badge">
+              <span class="status-dot"></span>
+              <span id="sched-status-text">Inactivo</span>
+            </div>
+            <span id="sched-cron-display" class="mono-text"></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cron-input">Expresión Cron</label>
+            <input type="text" id="cron-input" class="form-input mono-text"
+              placeholder="*/15 * * * *" value="*/15 * * * *"
+              aria-label="Expresión cron para el scheduler"/>
+            <div class="form-hint">
+              Formato: <code>minuto hora día mes día-semana</code>
+            </div>
+          </div>
+
+          <div class="cron-presets">
+            <span class="presets-label">Presets:</span>
+            <button class="preset-btn" onclick="setCron('*/15 * * * *')">Cada 15 min</button>
+            <button class="preset-btn" onclick="setCron('0 * * * *')">Cada hora</button>
+            <button class="preset-btn" onclick="setCron('0 */6 * * *')">Cada 6 horas</button>
+            <button class="preset-btn" onclick="setCron('0 8 * * 1-5')">Lun-Vie 8:00</button>
+            <button class="preset-btn" onclick="setCron('0 8,12,17 * * *')">3 veces/día</button>
+          </div>
+
+          <div class="scheduler-actions">
+            <button class="btn btn-primary" id="btn-start-scheduler" onclick="startScheduler()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5,3 19,12 5,21"/>
+              </svg>
+              Iniciar Scheduler
+            </button>
+            <button class="btn btn-danger" id="btn-stop-scheduler" onclick="stopScheduler()" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+              </svg>
+              Detener
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Panel -->
+        <div class="glass-card scheduler-stats-panel">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <h2>Estadísticas</h2>
+          </div>
+
+          <div class="sched-stats">
+            <div class="sched-stat">
+              <span class="sched-stat-label">Última ejecución</span>
+              <span class="sched-stat-value" id="sched-last-run">—</span>
+            </div>
+            <div class="sched-stat">
+              <span class="sched-stat-label">Total ejecuciones</span>
+              <span class="sched-stat-value" id="sched-run-count">0</span>
+            </div>
+            <div class="sched-stat">
+              <span class="sched-stat-label">Zona horaria</span>
+              <span class="sched-stat-value" id="sched-timezone">America/Bogota</span>
+            </div>
+            <div class="sched-stat">
+              <span class="sched-stat-label">Último error</span>
+              <span class="sched-stat-value error-text" id="sched-last-error">Ninguno</span>
+            </div>
+          </div>
+
+          <!-- History -->
+          <div class="history-section">
+            <h3 class="history-title">Historial de sesiones</h3>
+            <div id="history-list" class="history-list">
+              <p class="empty-history">Sin historial aún.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
